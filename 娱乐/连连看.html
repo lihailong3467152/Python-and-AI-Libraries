@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fruit Crush Deluxe</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+primary: '#FF6B6B',
+secondary: '#4ECDC4',
+accent: '#FFE66D',
+dark: '#2C3E50',
+glass: 'rgba(255, 255, 255, 0.25)',
+glassBorder: 'rgba(255, 255, 255, 0.4)',
+},
+fontFamily: {
+display: ['Fredoka', 'sans-serif'],
+body: ['Nunito', 'sans-serif'],
+},
+animation: {
+'bounce-short': 'bounce-short 0.5s ease-in-out 1',
+'float': 'float 3s ease-in-out infinite',
+'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+},
+keyframes: {
+'bounce-short': {
+'0%, 100%': { transform: 'translateY(0)' },
+'50%': { transform: 'translateY(-10px)' },
+},
+'float': {
+'0%, 100%': { transform: 'translateY(0)' },
+'50%': { transform: 'translateY(-5px)' },
+}
+}
+}
+}
+}
+</script>
+
+<style>
+body {
+font-family: 'Nunito', sans-serif;
+background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+overflow: hidden; /* Prevent scroll on mobile */
+touch-action: none;
+}
+
+.game-bg {
+background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
+position: relative;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+background: rgba(255, 255, 255, 0.65);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+border: 1px solid rgba(255, 255, 255, 0.5);
+box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+}
+
+.glass-button {
+background: rgba(255, 255, 255, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.6);
+box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+transition: all 0.2s ease;
+}
+
+.glass-button:active {
+transform: scale(0.95);
+}
+
+/* Grid Styling */
+#game-board {
+display: grid;
+grid-template-columns: repeat(8, 1fr);
+grid-template-rows: repeat(8, 1fr);
+gap: 4px;
+padding: 8px;
+border-radius: 16px;
+background: rgba(0, 0, 0, 0.1);
+box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.cell {
+position: relative;
+width: 100%;
+height: 100%;
+border-radius: 12px;
+background: rgba(255, 255, 255, 0.2);
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+user-select: none;
+transition: background 0.2s;
+}
+
+.cell:hover {
+background: rgba(255, 255, 255, 0.4);
+}
+
+/* Fruit Styling */
+.fruit {
+font-size: clamp(1.5rem, 4vw, 2.5rem);
+position: absolute;
+z-index: 10;
+transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+filter: drop-shadow(0 4px 2px rgba(0,0,0,0.1));
+}
+
+.fruit.selected {
+transform: scale(1.2);
+filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+z-index: 20;
+}
+
+.fruit.match-anim {
+transform: scale(0);
+opacity: 0;
+}
+
+/* Special Fruit Indicators */
+.special-indicator {
+position: absolute;
+font-size: 0.8rem;
+color: white;
+font-weight: bold;
+text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+z-index: 15;
+pointer-events: none;
+}
+
+/* Particle System */
+.particle {
+position: absolute;
+pointer-events: none;
+border-radius: 50%;
+z-index: 50;
+animation: particle-fade 0.8s forwards ease-out;
+}
+
+@keyframes particle-fade {
+0% { transform: translate(0, 0) scale(1); opacity: 1; }
+100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+/* Combo Text */
+.combo-text {
+position: absolute;
+font-family: 'Fredoka', sans-serif;
+font-weight: 700;
+color: #fff;
+text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+pointer-events: none;
+z-index: 100;
+animation: float-up 1s forwards;
+white-space: nowrap;
+}
+
+@keyframes float-up {
+0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+20% { transform: translate(-50%, -20px) scale(1.2); opacity: 1; }
+100% { transform: translate(-50%, -60px) scale(1); opacity: 0; }
+}
+
+/* Modal */
+.modal-overlay {
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,0.5);
+backdrop-filter: blur(5px);
+z-index: 1000;
+display: flex;
+align-items: center;
+justify-content: center;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.3s;
+}
+
+.modal-overlay.active {
+opacity: 1;
+pointer-events: auto;
+}
+
+.modal-content {
+background: white;
+padding: 2rem;
+border-radius: 24px;
+text-align: center;
+max-width: 90%;
+width: 400px;
+transform: translateY(20px);
+transition: transform 0.3s;
+box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-overlay.active .modal-content {
+transform: translateY(0);
+}
+</style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center game-bg">
+
+<!-- Background Decoration -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none">
+<div class="absolute top-10 left-10 w-32 h-32 bg-white opacity-20 rounded-full blur-3xl animate-float"></div>
+<div class="absolute bottom-20 right-10 w-48 h-48 bg-yellow-300 opacity-20 rounded-full blur-3xl animate-float" style="animation-delay: 1s;"></div>
+<div class="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-400 opacity-10 rounded-full blur-3xl"></div>
+</div>
+
+<!-- Main Container -->
+<div class="relative z-10 w-full max-w-lg h-full max-h-[900px] flex flex-col p-4">
+    
+    <!-- Header UI -->
+    <header class="glass-panel rounded-2xl p-4 mb-4 flex justify-between items-center shadow-lg">
+        <div class="flex flex-col">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Level</span>
+            <span class="text-2xl font-display font-bold text-dark" id="level-display">1</span>
+        </div>
+        
+        <div class="flex flex-col items-center">
+            <div class="text-3xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500 drop-shadow-sm">
+                FRUIT CRUSH
+            </div>
+            <div class="flex items-center gap-2 mt-1">
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <span class="text-sm font-bold text-gray-600">Target: <span id="target-score">1000</span></span>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-end">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Moves</span>
+            <span class="text-2xl font-display font-bold text-primary" id="moves-display">20</span>
+        </div>
+    </header>
+
+    <!-- Score Bar -->
+    <div class="mb-4 px-2">
+        <div class="flex justify-between text-sm font-bold text-gray-700 mb-1">
+            <span>Score</span>
+            <span id="score-display">0</span>
+        </div>
+        <div class="h-4 w-full bg-gray-200 rounded-full overflow-hidden shadow-inner border border-white/50">
+            <div id="score-bar" class="h-full bg-gradient-to-r from-green-400 to-emerald-500 w-0 transition-all duration-500 ease-out"></div>
+        </div>
+    </div>
+
+    <!-- Game Board Area -->
+    <div class="flex-1 relative flex items-center justify-center min-h-0">
+        <div id="game-board" class="w-full aspect-square glass-panel shadow-2xl">
+            <!-- Grid generated by JS -->
+        </div>
+        
+        <!-- Combo Text Container -->
+        <div id="combo-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+    </div>
+
+    <!-- Controls -->
+    <footer class="mt-4 flex justify-between items-center gap-4">
+        <button id="btn-sound" class="glass-button w-12 h-12 rounded-full flex items-center justify-center text-gray-600 hover:text-primary">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        
+        <div class="flex gap-2">
+            <button id="btn-shuffle" class="glass-button px-4 py-2 rounded-xl font-bold text-gray-600 hover:text-secondary flex items-center gap-2">
+                <i class="fas fa-random"></i> <span class="hidden sm:inline">Shuffle</span>
+            </button>
+            <button id="btn-restart" class="glass-button px-6 py-2 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 shadow-lg border-none flex items-center gap-2">
+                <i class="fas fa-redo"></i> Restart
+            </button>
+        </div>
+    </footer>
+</div>
+
+<!-- Game Over / Level Complete Modal -->
+<div id="modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="mb-4 text-6xl">🎉</div>
+        <h2 id="modal-title" class="text-3xl font-display font-bold text-gray-800 mb-2">Level Complete!</h2>
+        <p id="modal-message" class="text-gray-600 mb-6">You reached the target score.</p>
+        
+        <div class="flex justify-center gap-4">
+            <button id="modal-btn-next" class="px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                Next Level
+            </button>
+            <button id="modal-btn-retry" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition">
+                Retry
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Game Configuration & Constants
+ */
+const CONFIG = {
+    ROWS: 8,
+    COLS: 8,
+    FRUITS: ['🍎', '🍊', '🍇', '🥥', '🥝', '🫐'],
+    COLORS: {
+        '🍎': '#FF6B6B',
+        '🍊': '#FF9F43',
+        '🍇': '#5F27CD',
+        '🥥': '#FECA57',
+        '🥝': '#1DD1A1',
+        '🫐': '#54A0FF'
+    },
+    ANIMATION_DURATION: 250, // ms
+    SCORE_BASE: 10,
+    SCORE_MULTIPLIER: 1.5
+};
+
+/**
+ * Utility Functions
+ */
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+/**
+ * Class: ParticleSystem
+ * Handles visual effects when fruits are crushed
+ */
+class ParticleSystem {
+    constructor(container) {
+        this.container = container;
+    }
+
+    explode(x, y, color) {
+        const particleCount = 12;
+        for (let i = 0; i < particleCount; i++) {
+            const p = document.createElement('div');
+            p.classList.add('particle');
+            
+            // Random size
+            const size = Math.random() * 6 + 4;
+            p.style.width = `${size}px`;
+            p.style.height = `${size}px`;
+            p.style.backgroundColor = color;
+            p.style.left = `${x}px`;
+            p.style.top = `${y}px`;
+            
+            // Random direction
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 60 + 40;
+            const tx = Math.cos(angle) * velocity;
+            const ty = Math.sin(angle) * velocity;
+            
+            p.style.setProperty('--tx', `${tx}px`);
+            p.style.setProperty('--ty', `${ty}px`);
+            
+            this.container.appendChild(p);
+            
+            // Cleanup
+            setTimeout(() => p.remove(), 800);
+        }
+    }
+}
+
+/**
+ * Class: ScoreManager
+ * Handles scoring, levels, and UI updates
+ */
+class ScoreManager {
+    constructor() {
+        this.score = 0;
+        this.level = 1;
+        this.moves = 20;
+        this.targetScore = 1000;
+        this.combo = 0;
+        
+        // UI Elements
+        this.elScore = document.getElementById('score-display');
+        this.elScoreBar = document.getElementById('score-bar');
+        this.elLevel = document.getElementById('level-display');
+        this.elMoves = document.getElementById('moves-display');
+        this.elTarget = document.getElementById('target-score');
+        this.elComboContainer = document.getElementById('combo-container');
+    }
+
+    reset(level = 1) {
+        this.score = 0;
+        this.level = level;
+        this.moves = 20 + Math.floor(level / 2); // Increase moves slightly per level
+        this.targetScore = 1000 + (level - 1) * 1500;
+        this.updateUI();
+    }
+
+    addMatch(count, isSpecial = false) {
+        this.combo++;
+        let points = count * CONFIG.SCORE_BASE;
+        
+        // Combo Multiplier
+        points *= (1 + (this.combo - 1) * 0.5);
+        
+        // Special Bonus
+        if (isSpecial) points *= 2;
+        
+        this.score += Math.floor(points);
+        this.updateUI();
+        this.showComboText();
+        
+        return Math.floor(points);
+    }
+
+    decreaseMoves() {
+        this.moves--;
+        this.updateUI();
+        return this.moves;
+    }
+
+    updateUI() {
+        this.elScore.innerText = this.score;
+        this.elLevel.innerText = this.level;
+        this.elMoves.innerText = this.moves;
+        this.elTarget.innerText = this.targetScore;
+        
+        // Update progress bar
+        const progress = Math.min((this.score / this.targetScore) * 100, 100);
+        this.elScoreBar.style.width = `${progress}%`;
+    }
+
+    resetCombo() {
+        this.combo = 0;
+    }
+
+    showComboText() {
+        if (this.combo < 2) return;
+        
+        const text = document.createElement('div');
+        text.classList.add('combo-text');
+        
+        let msg = "Nice!";
+        let color = "#fff";
+        let size = "1.5rem";
+        
+        if (this.combo === 2) { msg = "Great!"; color = "#FFD700"; }
+        else if (this.combo === 3) { msg = "Amazing!"; color = "#FF6B6B"; size = "2rem"; }
+        else if (this.combo >= 4) { msg = "Unbelievable!"; color = "#9B59B6"; size = "2.5rem"; }
+        
+        text.innerText = msg;
+        text.style.color = color;
+        text.style.fontSize = size;
+        
+        // Position roughly center
+        text.style.left = "50%";
+        text.style.top = "40%";
+        
+        this.elComboContainer.appendChild(text);
+        setTimeout(() => text.remove(), 1000);
+    }
+
+    checkGameState() {
+        if (this.score >= this.targetScore) {
+            return 'win';
+        }
+        if (this.moves <= 0) {
+            return 'lose';
+        }
+        return 'playing';
+    }
+}
+
+/**
+ * Class: GameBoard
+ * Core logic for grid, matching, and interaction
+ */
+class GameBoard {
+    constructor(containerId, scoreManager, particleSystem) {
+        this.container = document.getElementById(containerId);
+        this.scoreManager = scoreManager;
+        this.particleSystem = particleSystem;
+        this.grid = []; // 2D array storing fruit data
+        this.selectedFruit = null; // {r, c, el}
+        this.isProcessing = false; // Lock input during animations
+        
+        this.init();
+    }
+
+    init() {
+        this.container.innerHTML = '';
+        this.grid = [];
+        this.scoreManager.resetCombo();
+        
+        // Create Grid
+        for (let r = 0; r < CONFIG.ROWS; r++) {
+            const row = [];
+            for (let c = 0; c < CONFIG.COLS; c++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+                
+                // Prevent initial matches
+                let fruitType;
+                do {
+                    fruitType = CONFIG.FRUITS[randomInt(0, CONFIG.FRUITS.length - 1)];
+                } while (
+                    (r >= 2 && this.grid[r-1][c].type === fruitType && this.grid[r-2][c].type === fruitType) ||
+                    (c >= 2 && row[c-1].type === fruitType && row[c-2].type === fruitType)
+                );
+
+                const fruitEl = this.createFruitElement(fruitType);
+                cell.appendChild(fruitEl);
+                this.container.appendChild(cell);
+                
+                row.push({
+                    type: fruitType,
+                    el: fruitEl,
+                    special: null // 'row', 'col', 'rainbow'
+                });
+            }
+            this.grid.push(row);
+        }
+
+        // Add Event Listeners
+        this.container.addEventListener('click', (e) => this.handleClick(e));
+    }
+
+    createFruitElement(type) {
+        const el = document.createElement('div');
+        el.classList.add('fruit');
+        el.innerText = type;
+        return el;
+    }
+
+    handleClick(e) {
+        if (this.isProcessing) return;
+
+        const cell = e.target.closest('.cell');
+        if (!cell) return;
+
+        const r = parseInt(cell.dataset.r);
+        const c = parseInt(cell.dataset.c);
+
+        // If nothing selected, select this
+        if (!this.selectedFruit) {
+            this.selectFruit(r, c);
+            return;
+        }
+
+        // If clicked same fruit, deselect
+        if (this.selectedFruit.r === r && this.selectedFruit.c === c) {
+            this.deselectFruit();
+            return;
+        }
+
+        // Check adjacency
+        const dist = Math.abs(this.selectedFruit.r - r) + Math.abs(this.selectedFruit.c - c);
+        if (dist === 1) {
+            this.attemptSwap(this.selectedFruit.r, this.selectedFruit.c, r, c);
+        } else {
+            // Select new
+            this.deselectFruit();
+            this.selectFruit(r, c);
+        }
+    }
+
+    selectFruit(r, c) {
+        this.selectedFruit = { r, c };
+        this.grid[r][c].el.classList.add('selected');
+    }
+
+    deselectFruit() {
+        if (this.selectedFruit) {
+            this.grid[this.selectedFruit.r][this.selectedFruit.c].el.classList.remove('selected');
+            this.selectedFruit = null;
+        }
+    }
+
+    async attemptSwap(r1, c1, r2, c2) {
+        this.isProcessing = true;
+        this.deselectFruit();
+
+        // Visual Swap
+        await this.swapVisuals(r1, c1, r2, c2);
+        
+        // Logical Swap
+        this.swapData(r1, c1, r2, c2);
+
+        // Check for matches
+        const matches = this.findMatches();
+        
+        if (matches.length > 0 || this.checkSpecialInteraction(r1, c1, r2, c2)) {
+            // Valid Move
+            this.scoreManager.decreaseMoves();
+            await this.processMatches(matches);
+        } else {
+            // Invalid Move - Swap Back
+            await this.swapVisuals(r1, c1, r2, c2);
+            this.swapData(r1, c1, r2, c2);
+            
+            // Shake animation for feedback
+            const el1 = this.grid[r1][c1].el;
+            const el2 = this.grid[r2][c2].el;
+            el1.style.transform = "translateX(5px)";
+            el2.style.transform = "translateX(-5px)";
+            setTimeout(() => {
+                el1.style.transform = "";
+                el2.style.transform = "";
+            }, 200);
+        }
+
+        this.isProcessing = false;
+        
+        // Check Game Over
+        const state = this.scoreManager.checkGameState();
+        if (state !== 'playing') {
+            game.gameOver(state);
+        }
+    }
+
+    // Handle Rainbow (Color Bomb) interaction specifically
+    checkSpecialInteraction(r1, c1, r2, c2) {
+        const f1 = this.grid[r1][c1];
+        const f2 = this.grid[r2][c2];
+        
+        // If one is rainbow
+        if (f1.special === 'rainbow' || f2.special === 'rainbow') {
+            const rainbow = f1.special === 'rainbow' ? f1 : f2;
+            const other = f1.special === 'rainbow' ? f2 : f1;
+            
+            // Trigger logic: Remove all of 'other.type'
+            const typeToRemove = other.type;
+            const matches = [];
+            
+            for(let r=0; r<CONFIG.ROWS; r++){
+                for(let c=0; c<CONFIG.COLS; c++){
+                    if(this.grid[r][c].type === typeToRemove) {
+                        matches.push({r, c});
+                    }
+                }
+            }
+            // Also remove the rainbow itself
+            const rainbowPos = (f1.special === 'rainbow') ? {r:r1, c:c1} : {r:r2, c:c2};
+            matches.push(rainbowPos);
+            
+            // Execute immediately
+            this.processMatches(matches); // Fire and forget (async handled inside)
+            return true;
+        }
+        return false;
+    }
+
+    swapData(r1, c1, r2, c2) {
+        const tempType = this.grid[r1][c1].type;
+        const tempSpecial = this.grid[r1][c1].special;
+        
+        this.grid[r1][c1].type = this.grid[r2][c2].type;
+        this.grid[r1][c1].special = this.grid[r2][c2].special;
+        
+        this.grid[r2][c2].type = tempType;
+        this.grid[r2][c2].special = tempSpecial;
+        
+        // Update DOM content
+        this.updateFruitVisual(r1, c1);
+        this.updateFruitVisual(r2, c2);
+    }
+
+    updateFruitVisual(r, c) {
+        const cell = this.grid[r][c];
+        cell.el.innerText = cell.type;
+        
+        // Reset classes
+        cell.el.className = 'fruit';
+        
+        // Add special indicators
+        if (cell.special === 'row' || cell.special === 'col') {
+            const indicator = document.createElement('div');
+            indicator.className = 'special-indicator';
+            indicator.innerHTML = cell.special === 'row' ? '↔️' : '↕️';
+            cell.el.appendChild(indicator);
+        } else if (cell.special === 'rainbow') {
+            cell.el.style.filter = "hue-rotate(90deg) brightness(1.2) drop-shadow(0 0 5px gold)";
+        } else {
+            cell.el.style.filter = "";
+        }
+    }
+
+    async swapVisuals(r1, c1, r2, c2) {
+        const el1 = this.grid[r1][c1].el;
+        const el2 = this.grid[r2][c2].el;
+        
+        // Calculate positions based on grid size (approximate or use getBoundingClientRect)
+        // Since grid is CSS Grid, we can just translate based on cell size roughly
+        // But cleaner way: just swap DOM positions? No, for animation we need transforms.
+        
+        // Get offsets
+        const cell1 = el1.parentElement;
+        const cell2 = el2.parentElement;
+        const rect1 = cell1.getBoundingClientRect();
+        const rect2 = cell2.getBoundingClientRect();
+        
+        const dx = rect2.left - rect1.left;
+        const dy = rect2.top - rect1.top;
+        
+        el1.style.transition = `transform ${CONFIG.ANIMATION_DURATION}ms ease-in-out`;
+        el2.style.transition = `transform ${CONFIG.ANIMATION_DURATION}ms ease-in-out`;
+        
+        el1.style.transform = `translate(${dx}px, ${dy}px)`;
+        el2.style.transform = `translate(${-dx}px, ${-dy}px)`;
+        
+        await wait(CONFIG.ANIMATION_DURATION);
+        
+        el1.style.transition = '';
+        el2.style.transition = '';
+        el1.style.transform = '';
+        el2.style.transform = '';
+    }
+
+    findMatches() {
+        const matchedSet = new Set();
+        
+        // Horizontal
+        for (let r = 0; r < CONFIG.ROWS; r++) {
+            for (let c = 0; c < CONFIG.COLS - 2; c++) {
+                const type = this.grid[r][c].type;
+                if (this.grid[r][c+1].type === type && this.grid[r][c+2].type === type) {
+                    matchedSet.add(`${r},${c}`);
+                    matchedSet.add(`${r},${c+1}`);
+                    matchedSet.add(`${r},${c+2}`);
+                }
+            }
+        }
+        
+        // Vertical
+        for (let c = 0; c < CONFIG.COLS; c++) {
+            for (let r = 0; r < CONFIG.ROWS - 2; r++) {
+                const type = this.grid[r][c].type;
+                if (this.grid[r+1][c].type === type && this.grid[r+2][c].type === type) {
+                    matchedSet.add(`${r},${c}`);
+                    matchedSet.add(`${r+1},${c}`);
+                    matchedSet.add(`${r+2},${c}`);
+                }
+            }
+        }
+        
+        return Array.from(matchedSet).map(str => {
+            const [r, c] = str.split(',').map(Number);
+            return {r, c};
+        });
+    }
+
+    async processMatches(matches) {
+        if (matches.length === 0) {
+            this.scoreManager.resetCombo();
+            return;
+        }
+
+        // 1. Identify Special Creations
+        const specialsToCreate = this.detectSpecialPatterns(matches);
+        
+        // 2. Remove Matches (Visual & Logic)
+        await this.removeMatches(matches);
+        
+        // 3. Create Specials
+        this.createSpecials(specialsToCreate);
+        
+        // 4. Drop Fruits
+        await this.applyGravity();
+        
+        // 5. Fill Top
+        await this.fillBoard();
+        
+        // 6. Recursion (Chain Reaction)
+        const newMatches = this.findMatches();
+        if (newMatches.length > 0) {
+            await wait(200);
+            await this.processMatches(newMatches);
+        } else {
+            this.scoreManager.resetCombo();
+        }
+    }
+
+    detectSpecialPatterns(matches) {
+        // Group matches by row/col to find 4-in-a-row or L/T shapes
+        // Simplified logic: If 4 or more matched, create special at one of the positions
+        
+        // Group by rows
+        const rowGroups = {};
+        const colGroups = {};
+        
+        matches.forEach(m => {
+            if(!rowGroups[m.r]) rowGroups[m.r] = [];
+            if(!colGroups[m.c]) colGroups[m.c] = [];
+            rowGroups[m.r].push(m.c);
+            colGroups[m.c].push(m.r);
+        });
+        
+        const specials = [];
+        
+        // Check for 4+ in a row
+        for (let r in rowGroups) {
+            const cols = rowGroups[r].sort((a,b) => a-b);
+            let count = 1;
+            for(let i=0; i<cols.length-1; i++) {
+                if(cols[i+1] === cols[i]+1) count++;
+                else {
+                    if(count >= 4) specials.push({r: parseInt(r), c: cols[i], type: 'row'}); // End of chain
+                    count = 1;
+                }
+            }
+            if(count >= 4) specials.push({r: parseInt(r), c: cols[cols.length-1], type: 'row'});
+        }
+        
+        // Check for 4+ in a col
+        for (let c in colGroups) {
+            const rows = colGroups[c].sort((a,b) => a-b);
+            let count = 1;
+            for(let i=0; i<rows.length-1; i++) {
+                if(rows[i+1] === rows[i]+1) count++;
+                else {
+                    if(count >= 4) specials.push({r: rows[i], c: parseInt(c), type: 'col'});
+                    count = 1;
+                }
+            }
+            if(count >= 4) specials.push({r: rows[rows.length-1], c: parseInt(c), type: 'col'});
+        }
+        
+        // If 5 or more matches total in a cluster (L or T), we'd need complex geometry.
+        // For this demo, let's say if we have > 4 matches anywhere and no line special found, make a rainbow?
+        // Or simply: if matches.length >= 5, make a rainbow at the first match index.
+        if (matches.length >= 5 && specials.length === 0) {
+             specials.push({r: matches[0].r, c: matches[0].c, type: 'rainbow'});
+        }
+        
+        return specials;
+    }
+
+    async removeMatches(matches) {
+        const isSpecial = matches.some(m => this.grid[m.r][m.c].special !== null);
+        this.scoreManager.addMatch(matches.length, isSpecial);
+
+        for (const {r, c} of matches) {
+            const cell = this.grid[r][c];
+            
+            // Handle Special Explosions
+            if (cell.special === 'row') {
+                for(let i=0; i<CONFIG.COLS; i++) this.triggerCellEffect(r, i);
+            } else if (cell.special === 'col') {
+                for(let i=0; i<CONFIG.ROWS; i++) this.triggerCellEffect(i, c);
+            }
+            
+            // Particle Effect
+            const rect = cell.el.getBoundingClientRect();
+            const color = CONFIG.COLORS[cell.type] || '#fff';
+            this.particleSystem.explode(rect.left + rect.width/2, rect.top + rect.height/2, color);
+            
+            // Animate out
+            cell.el.classList.add('match-anim');
+        }
+        
+        await wait(300);
+        
+        // Clear Data
+        for (const {r, c} of matches) {
+            this.grid[r][c].type = null;
+            this.grid[r][c].special = null;
+            this.grid[r][c].el.classList.remove('match-anim');
+            this.grid[r][c].el.innerText = '';
+            this.grid[r][c].el.style.filter = '';
+        }
+    }
+
+    triggerCellEffect(r, c) {
+        // Helper to add visual effect without full match logic recursion (to prevent infinite loops in simple logic)
+        const cell = this.grid[r][c];
+        if(cell.type) {
+             const rect = cell.el.getBoundingClientRect();
+             this.particleSystem.explode(rect.left + rect.width/2, rect.top + rect.height/2, '#fff');
+             cell.type = null; // Mark for removal
+             cell.el.innerText = '';
+        }
+    }
+
+    createSpecials(specials) {
+        specials.forEach(s => {
+            // Find a fruit type to assign to the special (usually the type that was matched)
+            // Since we cleared types, we need to pick a random neighbor or just random
+            // For simplicity, random from config
+            const type = CONFIG.FRUITS[randomInt(0, CONFIG.FRUITS.length-1)];
+            
+            this.grid[s.r][s.c].type = type;
+            this.grid[s.r][s.c].special = s.type;
+            this.updateFruitVisual(s.r, s.c);
+            
+            // Pop animation
+            this.grid[s.r][s.c].el.style.transform = "scale(0)";
+            setTimeout(() => {
+                this.grid[s.r][s.c].el.style.transform = "scale(1.2)";
+                setTimeout(() => this.grid[s.r][s.c].el.style.transform = "scale(1)", 150);
+            }, 50);
+        });
+    }
+
+    async applyGravity() {
+        let moved = false;
+        
+        for (let c = 0; c < CONFIG.COLS; c++) {
+            let emptySlots = 0;
+            for (let r = CONFIG.ROWS - 1; r >= 0; r--) {
+                if (this.grid[r][c].type === null) {
+                    emptySlots++;
+                } else if (emptySlots > 0) {
+                    // Move down
+                    const targetR = r + emptySlots;
+                    this.grid[targetR][c].type = this.grid[r][c].type;
+                    this.grid[targetR][c].special = this.grid[r][c].special;
+                    this.grid[r][c].type = null;
+                    this.grid[r][c].special = null;
+                    
+                    this.updateFruitVisual(targetR, c);
+                    this.grid[r][c].el.innerText = '';
+                    
+                    // Animate
+                    const el = this.grid[targetR][c].el;
+                    const cellHeight = this.container.clientHeight / CONFIG.ROWS;
+                    el.style.transform = `translateY(-${emptySlots * cellHeight}px)`;
+                    el.style.transition = 'none';
+                    
+                    // Force reflow
+                    el.offsetHeight; 
+                    
+                    el.style.transition = `transform ${CONFIG.ANIMATION_DURATION}ms ease-out`;
+                    el.style.transform = 'translateY(0)';
+                    
+                    moved = true;
+                }
+            }
+        }
+        
+        if (moved) await wait(CONFIG.ANIMATION_DURATION);
+    }
+
+    async fillBoard() {
+        for (let c = 0; c < CONFIG.COLS; c++) {
+            for (let r = 0; r < CONFIG.ROWS; r++) {
+                if (this.grid[r][c].type === null) {
+                    const type = CONFIG.FRUITS[randomInt(0, CONFIG.FRUITS.length - 1)];
+                    this.grid[r][c].type = type;
+                    this.grid[r][c].special = null;
+                    this.updateFruitVisual(r, c);
+                    
+                    // Drop in animation
+                    const el = this.grid[r][c].el;
+                    const cellHeight = this.container.clientHeight / CONFIG.ROWS;
+                    el.style.transform = `translateY(-${(r+2) * cellHeight}px)`; // Start from above
+                    el.style.transition = 'none';
+                    el.offsetHeight;
+                    
+                    el.style.transition = `transform ${CONFIG.ANIMATION_DURATION}ms ease-out`;
+                    el.style.transform = 'translateY(0)';
+                }
+            }
+        }
+        await wait(CONFIG.ANIMATION_DURATION);
+    }
+}
+
+/**
+ * Main Game Controller
+ */
+class Game {
+    constructor() {
+        this.particleSystem = new ParticleSystem(document.body);
+        this.scoreManager = new ScoreManager();
+        this.board = new GameBoard('game-board', this.scoreManager, this.particleSystem);
+        
+        this.modal = document.getElementById('modal');
+        this.modalTitle = document.getElementById('modal-title');
+        this.modalMsg = document.getElementById('modal-message');
+        this.btnNext = document.getElementById('modal-btn-next');
+        this.btnRetry = document.getElementById('modal-btn-retry');
+        
+        this.setupUI();
+    }
+
+    setupUI() {
+        // Sound Toggle
+        const btnSound = document.getElementById('btn-sound');
+        let soundOn = true;
+        btnSound.addEventListener('click', () => {
+            soundOn = !soundOn;
+            btnSound.innerHTML = soundOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
+            // Note: Actual audio implementation would go here
+        });
+
+        // Restart
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            this.startLevel(1);
+        });
+
+        // Shuffle (Cheat/Debug feature)
+        document.getElementById('btn-shuffle').addEventListener('click', () => {
+            this.board.init();
+        });
+
+        // Modal Buttons
+        this.btnNext.addEventListener('click', () => {
+            this.modal.classList.remove('active');
+            this.startLevel(this.scoreManager.level + 1);
+        });
+
+        this.btnRetry.addEventListener('click', () => {
+            this.modal.classList.remove('active');
+            this.startLevel(this.scoreManager.level);
+        });
+    }
+
+    startLevel(level) {
+        this.scoreManager.reset(level);
+        this.board.init();
+    }
+
+    gameOver(result) {
+        setTimeout(() => {
+            this.modal.classList.add('active');
+            if (result === 'win') {
+                this.modalTitle.innerText = "Level Complete!";
+                this.modalTitle.className = "text-3xl font-display font-bold text-green-500 mb-2";
+                this.modalMsg.innerText = `Amazing! You scored ${this.scoreManager.score} points.`;
+                this.btnNext.style.display = 'inline-block';
+            } else {
+                this.modalTitle.innerText = "Out of Moves!";
+                this.modalTitle.className = "text-3xl font-display font-bold text-red-500 mb-2";
+                this.modalMsg.innerText = `So close! You needed ${this.scoreManager.targetScore - this.scoreManager.score} more points.`;
+                this.btnNext.style.display = 'none';
+            }
+        }, 500);
+    }
+}
+
+// Start Game
+let game;
+window.onload = () => {
+    game = new Game();
+};
+
+</script>
+</body>
+</html>
