@@ -1,0 +1,8 @@
+streamlit
+pandas
+plotly
+reportlab
+openpyxl
+bcrypt
+filelock
+pytest
